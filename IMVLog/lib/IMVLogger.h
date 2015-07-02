@@ -47,7 +47,9 @@ format : (frmt), ## __VA_ARGS__]
 
 + (void)log:(IMVLogFlag)flg format:(NSString *)format, ...;
 
-- (void)logToFileWithHomePath:(NSString *)homePath;
+- (void)setLogToFileEnable:(BOOL)enable;
+
+- (void)setLogToFileHomePath:(NSString *)homePath;
 
 - (void)setLogCacheSize:(NSInteger)size;
 

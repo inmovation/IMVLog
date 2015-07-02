@@ -12,11 +12,12 @@
 
 @property (strong, nonatomic) NSString *logHomePath;
 @property (strong, nonatomic) NSMutableString *logMsgs;
-
-@property (assign, nonatomic) NSInteger cacheSize;
-@property (assign, nonatomic) NSInteger cacheNum;
-
 @property (strong, nonatomic) NSDateFormatter *dateFormatter;
+
+@property (nonatomic) NSInteger cacheSize;
+@property (nonatomic) NSInteger cacheNum;
+@property (nonatomic) BOOL logToFileEnable;
+
 @property (nonatomic) dispatch_queue_t queue;
 
 @end
@@ -52,6 +53,7 @@
         _queue = dispatch_queue_create("IMVLogToFileQueue", DISPATCH_QUEUE_SERIAL);
         _cacheSize = 100;
         _cacheNum = 0;
+        _logToFileEnable = YES;
         
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationWillTerminate) name:UIApplicationWillTerminateNotification object:nil];
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationDidEnterBackground) name:UIApplicationDidEnterBackgroundNotification object:nil];
@@ -74,9 +76,13 @@
 
 - (void)synchronizeMsg
 {
-    NSString *syncMsgs = [[NSString alloc] initWithString:[NSString stringWithFormat:@"%@", _logMsgs]];
+    NSString *syncMsgs = [[NSString alloc] initWithString:_logMsgs];
     [_logMsgs setString:@""];
     _cacheNum = 0;
+    
+    if (!_logToFileEnable) {
+        return;
+    }
     
     if (!_logHomePath) {
         _logHomePath = [[NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) lastObject] stringByAppendingPathComponent:@"logs"];
@@ -136,7 +142,12 @@
     
 }
 
-- (void)logToFileWithHomePath:(NSString *)homePath
+- (void)setLogToFileEnable:(BOOL)enable
+{
+    _logToFileEnable = enable;
+}
+
+- (void)setLogToFileHomePath:(NSString *)homePath
 {
     _logHomePath = homePath;
     [[NSFileManager defaultManager] createDirectoryAtPath:_logHomePath withIntermediateDirectories:YES attributes:nil error:nil];
