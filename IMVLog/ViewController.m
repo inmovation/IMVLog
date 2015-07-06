@@ -15,9 +15,12 @@
 
 @implementation ViewController
 
+//static const IMVLogLevel imvLogLevel = IMVLogLevelInfo;
+
 - (void)viewDidLoad {
     [super viewDidLoad];
     // Do any additional setup after loading the view, typically from a nib.
+    
     NSLogDebug(@"%@", @"msg for debug");
     NSLogError(@"%@", @"msg for error");
     NSLogWarn(@"%@", @"msg for warn");

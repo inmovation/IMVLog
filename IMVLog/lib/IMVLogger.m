@@ -16,7 +16,9 @@
 
 @property (nonatomic) NSInteger cacheSize;
 @property (nonatomic) NSInteger cacheNum;
-@property (nonatomic) BOOL logToFileEnable;
+@property (nonatomic) NSInteger lastDates;
+
+@property (nonatomic) BOOL logFileEnable;
 
 @property (nonatomic) dispatch_queue_t queue;
 
@@ -53,7 +55,9 @@
         _queue = dispatch_queue_create("IMVLogToFileQueue", DISPATCH_QUEUE_SERIAL);
         _cacheSize = 100;
         _cacheNum = 0;
-        _logToFileEnable = YES;
+        _lastDates = 30;
+        _logFileEnable = NO;
+        _logHomePath = [[NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) lastObject] stringByAppendingPathComponent:@"logs"];
         
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationWillTerminate) name:UIApplicationWillTerminateNotification object:nil];
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationDidEnterBackground) name:UIApplicationDidEnterBackgroundNotification object:nil];
@@ -65,6 +69,9 @@
 #pragma mark private method
 - (void)addMsg:(NSString *)msg
 {
+    if (!_logFileEnable) {
+        return;
+    }
     @synchronized(self) {
         [_logMsgs appendString:msg];
         _cacheNum++;
@@ -76,16 +83,15 @@
 
 - (void)synchronizeMsg
 {
+    if (!_logFileEnable) {
+        return;
+    }
     NSString *syncMsgs = [[NSString alloc] initWithString:_logMsgs];
     [_logMsgs setString:@""];
     _cacheNum = 0;
     
-    if (!_logToFileEnable) {
-        return;
-    }
-    
-    if (!_logHomePath) {
-        _logHomePath = [[NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) lastObject] stringByAppendingPathComponent:@"logs"];
+    if (![[NSFileManager defaultManager] fileExistsAtPath:_logHomePath]) {
+        
         [[NSFileManager defaultManager] createDirectoryAtPath:_logHomePath withIntermediateDirectories:YES attributes:nil error:nil];
     }
     
@@ -106,6 +112,18 @@
     });
 }
 
+- (void)clearExpiredLogs
+{
+    NSDate *expireDate = [NSDate dateWithTimeInterval:-_lastDates*24*3600 sinceDate:[NSDate date]];
+    NSString *expireFileName = [NSString stringWithFormat:@"%@.txt", [_dateFormatter stringFromDate:expireDate]];
+    NSArray *subPathes = [[NSFileManager defaultManager] subpathsAtPath:_logHomePath];
+    for (NSString *subpath in subPathes) {
+        if ([subpath compare:expireFileName] == NSOrderedAscending) {
+            [[NSFileManager defaultManager] removeItemAtPath:[_logHomePath stringByAppendingPathComponent:subpath] error:nil];
+        }
+    }
+}
+
 #pragma mark public method
 + (void)log:(IMVLogFlag)flg format:(NSString *)format, ...
 {
@@ -113,12 +131,10 @@
     
     if (format) {
         va_start(args, format);
-        
         NSString *msg = [[NSString alloc] initWithFormat:format arguments:args];
+        va_end(args);
 
         NSString *caller = [[[[NSThread callStackSymbols] objectAtIndex:1] componentsSeparatedByCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@"[]"]] objectAtIndex:1];
-        
-        va_end(args);
 
         if (flg == IMVLogFlagDebug) {
             msg = [NSString stringWithFormat:@"[debug] [%@] %@\n\n", caller, msg];
@@ -136,29 +152,39 @@
 #ifdef DEBUG
         NSLog(@"%@", msg);
 #endif
-      
+        
         [[IMVLogger sharedInstence] addMsg:[NSString stringWithFormat:@"[%@]%@", [NSDate date], msg]];
+        
     }
     
 }
 
-- (void)setLogToFileEnable:(BOOL)enable
+- (void)setLogFileEnable:(BOOL)enable
 {
-    _logToFileEnable = enable;
+    _logFileEnable = enable;
 }
 
-- (void)setLogToFileHomePath:(NSString *)homePath
+- (void)setLogFileHomePath:(NSString *)homePath
 {
     _logHomePath = homePath;
     [[NSFileManager defaultManager] createDirectoryAtPath:_logHomePath withIntermediateDirectories:YES attributes:nil error:nil];
 }
 
-- (void)setLogCacheSize:(NSInteger)size
+- (void)setLogCacheSize:(NSInteger)cacheSize;
 {
-    _cacheSize = size;
+    _cacheSize = cacheSize;
 }
 
+- (void)setLogFileLastTime:(NSInteger)date
+{
+    _lastDates = date;
+}
 
+- (void)clearLogFiles
+{
+    [[NSFileManager defaultManager] removeItemAtPath:_logHomePath error:nil];
+    [[NSFileManager defaultManager] createDirectoryAtPath:_logHomePath withIntermediateDirectories:YES attributes:nil error:nil];
+}
 
 #pragma mark - UIApplicationDelegate
 - (void)applicationWillTerminate
@@ -169,5 +195,6 @@
 - (void)applicationDidEnterBackground
 {
     [self synchronizeMsg];
+    [self clearExpiredLogs];
 }
 @end

@@ -16,7 +16,7 @@ Pod::Spec.new do |s|
   #
 
   s.name         = "IMVLog"
-  s.version      = "1.0.0"
+  s.version      = "1.0.1"
   s.summary      = "log for app"
 
   s.description  = <<-DESC
@@ -73,7 +73,7 @@ Pod::Spec.new do |s|
   #  Supports git, hg, bzr, svn and HTTP.
   #
 
-  s.source       = { :git => "https://github.com/inmovation/IMVLog.git", :tag => "1.0.0" }
+  s.source       = { :git => "https://github.com/inmovation/IMVLog.git", :tag => "1.0.1" }
 
 
   # ――― Source Code ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――― #
